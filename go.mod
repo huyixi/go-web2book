@@ -26,6 +26,7 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
@@ -51,3 +52,5 @@ require (
 replace github.com/huyixi/go-web2book/handler => ./handler
 
 replace github.com/huyixi/go-web2book/scraper => ./scraper
+
+replace github.com/huyixi/go-web2book/routes => ./routes

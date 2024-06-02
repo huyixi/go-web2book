@@ -3,11 +3,16 @@ package scraper
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"net/url"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gocolly/colly/v2"
+	"github.com/gocolly/colly/v2/proxy"
 )
 
 var userAgents = []string{
@@ -25,6 +30,41 @@ func RandomUserAgent() string {
 	return fmt.Sprintf(ua, rand.Intn(20)+60, rand.Intn(1000)+100, rand.Intn(1000))
 }
 
+// getProxyURL retrieves the proxy URL from the proxy pool URL specified in the environment variable.
+func getProxyURL() (string, error) {
+	proxyPoolURL := os.Getenv("PROXY_POOL_URL")
+	if proxyPoolURL == "" {
+		return "", errors.New("PROXY_POOL_URL is not set in .env file")
+	}
+
+	resp, err := http.Get(proxyPoolURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to get proxy from pool: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("proxy pool server returned non-200 status: %v", resp.Status)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read proxy response body: %v", err)
+	}
+
+	proxyURL := strings.TrimSpace(string(body))
+	if !strings.HasPrefix(proxyURL, "http://") && !strings.HasPrefix(proxyURL, "https://") && !strings.HasPrefix(proxyURL, "socks5://") {
+		proxyURL = "http://" + proxyURL
+	}
+
+	_, err = url.Parse(proxyURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid proxy URL: %v", err)
+	}
+
+	return proxyURL, nil
+}
+
 // Scrape fetches the HTML content from the given URL and saves it to a file.
 func Scrape(url string, filename string) error {
 	if url == "" {
@@ -33,6 +73,20 @@ func Scrape(url string, filename string) error {
 
 	// Initialize Colly collector
 	collector := colly.NewCollector()
+
+	// Set proxy if provided via environment variable
+	proxyURL, err := getProxyURL()
+	if err != nil {
+		return err
+	}
+	if proxyURL != "" {
+		// Using the proxy.RoundRobinProxySwitcher to set proxy
+		rp, err := proxy.RoundRobinProxySwitcher(proxyURL)
+		if err != nil {
+			return fmt.Errorf("failed to set proxy: %v", err)
+		}
+		collector.SetProxyFunc(rp)
+	}
 
 	// Set up a callback function to be executed when a request is made
 	collector.OnRequest(func(r *colly.Request) {

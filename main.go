@@ -2,16 +2,20 @@ package main
 
 import (
 	"fmt"
+	"log"
 
-	"github.com/gin-gonic/gin"
-	"github.com/huyixi/go-web2book/handler"
+	"github.com/joho/godotenv"
+
+	"github.com/huyixi/go-web2book/routes"
 )
 
 func main() {
-	r := gin.Default()
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
 
-	// API 路由
-	r.POST("/scrape", handlers.ScrapeHandler)
+	r := routes.SetupRouter()
 
 	fmt.Println("Server started at :8080")
 	r.Run(":8080")
